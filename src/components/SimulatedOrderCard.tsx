@@ -1,17 +1,25 @@
-import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { CartItem } from '../lib/cart-provider';
-import { Share2, X, RotateCcw, Star, Loader2, Clock } from 'lucide-react';
-import { OrderStatusProgress } from './OrderStatusProgress';
-import { AnimatedContainer } from './ui/animated-container';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { CartItem, useCart } from '@/lib/cart-provider';
+// import { getOrderStatus } from '@/lib/food-data'; // Not needed here, status comes from props
+import { Share2, X, RotateCcw, Star } from 'lucide-react';
+import { OrderStatusProgress } from '@/components/OrderStatusProgress';
+import { AnimatedContainer } from '@/components/ui/animated-container';
 import { RatingDialog } from './RatingDialog';
-import { toast } from './ui/sonner';
-import { ratingService } from '../lib/rating-service';
-import { cn } from '../lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/components/ui/sonner";
 
 // Mirror the Order and StatusUpdate interfaces from Orders.tsx
 interface StatusUpdate {
@@ -28,13 +36,6 @@ interface Order {
   statusHistory: StatusUpdate[];
 }
 
-interface Rating {
-  id: string;
-  itemId: string;
-  rating: number;
-  review: string;
-}
-
 interface SimulatedOrderCardProps {
   order: Order;
   updateOrderStatusInParent: (orderId: string, newStatus: string, newTimestamp: number) => void;
@@ -43,6 +44,28 @@ interface SimulatedOrderCardProps {
   onReorder: (order: Order) => void;
   animationDelay?: number;
 }
+
+const orderSimulationSteps = ["Order Received", "Preparing", "Ready for Pickup", "Completed"];
+
+// Helper function to handle image errors and provide fallbacks
+const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, itemName: string) => {
+  const imgElement = e.currentTarget;
+  const fallbackImage = `/images/${itemName.toLowerCase().replace(/\s+/g, '-')}.jpg`;
+  
+  if (imgElement.src !== fallbackImage) {
+    console.log(`Attempting to load fallback image: ${fallbackImage}`);
+    imgElement.src = fallbackImage;
+    // Add a second error handler for the fallback image
+    imgElement.onerror = (err) => {
+      console.error(`Error loading fallback image ${fallbackImage}:`, err);
+      imgElement.src = '/placeholder.svg';
+      imgElement.onerror = null; // Prevent infinite loops
+    };
+  } else {
+    imgElement.src = '/placeholder.svg';
+    imgElement.onerror = null;
+  }
+};
 
 export function SimulatedOrderCard({ 
   order,
@@ -54,215 +77,171 @@ export function SimulatedOrderCard({
 }: SimulatedOrderCardProps) {
   const [currentStatusInternal, setCurrentStatusInternal] = useState(order.currentStatus);
   const [statusHistoryInternal, setStatusHistoryInternal] = useState<StatusUpdate[]>(order.statusHistory);
-  const [ratings, setRatings] = useState<Record<string, Rating>>({});
-  const [isLoadingRatings, setIsLoadingRatings] = useState(true);
+  const [ratings, setRatings] = useState<Record<string, { rating: number; review: string }>>({});
 
-  // Load existing ratings when component mounts
+  // Simulation effect
   useEffect(() => {
-    const loadRatings = async () => {
-      try {
-        const orderRatings = await ratingService.getOrderRatings(order.orderId);
-        const ratingsMap = orderRatings.reduce((acc, rating) => ({
-          ...acc,
-          [rating.itemId]: rating
-        }), {});
-        setRatings(ratingsMap);
-      } catch (error) {
-        console.error('Error loading ratings:', error);
-        toast.error('Failed to load ratings');
-      } finally {
-        setIsLoadingRatings(false);
-      }
-    };
-
-    if (currentStatusInternal === "Completed") {
-      loadRatings();
-    } else {
-      setIsLoadingRatings(false);
+    if (currentStatusInternal === "Completed" || currentStatusInternal === "Cancelled") {
+      return; // Stop simulation if order is completed or cancelled
     }
-  }, [order.orderId, currentStatusInternal]);
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, itemName: string) => {
-    const imgElement = e.currentTarget;
-    const fallbackImage = `/images/${itemName.toLowerCase().replace(/\s+/g, '-')}.jpg`;
-    
-    if (imgElement.src !== fallbackImage) {
-      console.log(`Attempting to load fallback image: ${fallbackImage}`);
-      imgElement.src = fallbackImage;
-      // Add a second error handler for the fallback image
-      imgElement.onerror = (err) => {
-        console.error(`Error loading fallback image ${fallbackImage}:`, err);
-        imgElement.src = '/placeholder.svg';
-        imgElement.onerror = null; // Prevent infinite loops
-      };
-    } else {
-      imgElement.src = '/placeholder.svg';
-      imgElement.onerror = null;
+    const currentStepIndex = orderSimulationSteps.indexOf(currentStatusInternal);
+    if (currentStepIndex === -1 || currentStepIndex >= orderSimulationSteps.length - 1) {
+      return; // Current status not in steps or is the last step (Completed)
     }
+
+    const nextStatus = orderSimulationSteps[currentStepIndex + 1];
+    // Simulate varying delays (e.g., 10 to 25 seconds)
+    const delay = Math.random() * 15000 + 10000; 
+
+    const timer = setTimeout(() => {
+      const newTimestamp = Date.now();
+      setCurrentStatusInternal(nextStatus);
+      setStatusHistoryInternal(prevHistory => 
+        [...prevHistory, { status: nextStatus, timestamp: newTimestamp }]
+        .sort((a,b) => a.timestamp - b.timestamp)
+      );
+      updateOrderStatusInParent(order.orderId, nextStatus, newTimestamp);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [currentStatusInternal, order.orderId, updateOrderStatusInParent]);
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString();
+  };
+
+  const canBeCancelled = (status: string) => {
+    return status !== "Completed" && status !== "Cancelled";
+  };
+
+  const handleRatingSubmit = (itemId: string, rating: number, review: string) => {
+    setRatings(prev => ({
+      ...prev,
+      [itemId]: { rating, review }
+    }));
+
+    // Here you would typically send this to your backend
+    console.log(`Rating submitted for item ${itemId}:`, { rating, review });
   };
 
   const canRate = currentStatusInternal === "Completed";
-
-  const handleRatingSubmit = async (itemId: string, rating: number, review: string) => {
-    try {
-      if (rating === 0) {
-        // Rating was deleted
-        setRatings(prev => {
-          const newRatings = { ...prev };
-          delete newRatings[itemId];
-          return newRatings;
-        });
-      } else {
-        setRatings(prev => ({
-          ...prev,
-          [itemId]: {
-            id: prev[itemId]?.id || 'temp-id',
-            itemId,
-            rating,
-            review
-          }
-        }));
-      }
-    } catch (error) {
-      console.error('Error handling rating:', error);
-      toast.error('Failed to update rating');
-    }
-  };
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   return (
     <AnimatedContainer 
       animation="fade-in" 
       delay={animationDelay}
-      className="transition-all duration-300 hover:shadow-lg"
+      className="transition-all hover:shadow-md"
     >
-      <Card className="overflow-hidden bg-card hover:bg-card/95 transition-colors duration-300">
-        <CardHeader className="p-3 sm:p-4 md:p-6 space-y-2 bg-muted/10">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base sm:text-lg font-semibold flex flex-wrap items-center gap-2">
-                  <span>Order #{order.orderId.slice(-6)}</span>
-                  <Badge variant={currentStatusInternal === "Completed" ? "default" : "secondary"} 
-                        className="animate-fade-in">
-                    {currentStatusInternal}
-                  </Badge>
-                </CardTitle>
-                <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                  {formatDate(order.timestamp)}
-                </div>
-              </div>
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 sm:flex-initial hover:bg-primary/10 transition-colors text-xs sm:text-sm h-8 sm:h-9"
-                  onClick={() => onShareOrder(order)}
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-muted/40">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Order #{order.orderId}</p>
+              <CardTitle className="text-lg mt-1">{formatDate(order.timestamp)}</CardTitle>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2 self-start md:self-auto">
+              {canBeCancelled(currentStatusInternal) && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => onCancelOrder(order.orderId)}
+                  className="gap-1 text-destructive hover:text-destructive w-full sm:w-auto"
                 >
-                  <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                  Share
+                  <X className="h-3.5 w-3.5" />
+                  Cancel Order
                 </Button>
-                {currentStatusInternal === "Completed" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 sm:flex-initial hover:bg-primary/10 transition-colors text-xs sm:text-sm h-8 sm:h-9"
-                    onClick={() => onReorder(order)}
-                  >
-                    <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                    Reorder
-                  </Button>
-                )}
-              </div>
+              )}
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onReorder(order)}
+                className="gap-1 w-full sm:w-auto"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reorder
+              </Button>
+
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onShareOrder(order)}
+                className="gap-1 w-full sm:w-auto"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share Order
+              </Button>
             </div>
           </div>
         </CardHeader>
         
-        <CardContent className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+        <CardContent className="pt-6 space-y-6">
           <OrderStatusProgress 
             currentStatus={currentStatusInternal} 
             statusHistory={statusHistoryInternal} 
             orderId={order.orderId}
           />
           
-          <ul className="space-y-4 divide-y divide-border">
+          <ul className="space-y-4">
             {order.items.map((item) => (
-              <li key={item.id} className="pt-4 first:pt-0">
-                <div className="group flex flex-col sm:flex-row items-start gap-3 sm:gap-4 hover:bg-muted/30 p-2 sm:p-3 rounded-lg transition-all duration-300">
-                  <div className="relative overflow-hidden rounded-lg w-full sm:w-24 h-20 sm:h-24 flex-shrink-0">
-                    <img 
-                      src={`/images/${item.name.toLowerCase().replace(/\s+/g, '-')}.jpg`}
-                      alt={item.name}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                      onError={(e) => handleImageError(e, item.name)}
-                    />
+              <li key={item.id} className="flex flex-col sm:flex-row justify-between gap-4 hover:bg-muted/30 p-3 rounded-md transition-colors">
+                <img 
+                  src={`/images/${item.name.toLowerCase().replace(/\s+/g, '-')}.jpg`}
+                  alt={item.name}
+                  className="h-24 w-full sm:h-20 sm:w-20 rounded-lg object-cover transition-transform hover:scale-105 bg-muted"
+                  style={{ display: 'block' }}
+                  onError={(e) => handleImageError(e, item.name)}
+                />
+                <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                    <div>
+                      <span className="font-medium">{item.name}</span>
+                      <span className="ml-2 text-muted-foreground">x{item.quantity}</span>
+                    </div>
+                    {canRate && (
+                      <RatingDialog
+                        itemId={item.id}
+                        itemName={item.name}
+                        orderId={order.orderId}
+                        onRatingSubmit={handleRatingSubmit}
+                          trigger={
+                            ratings[item.id] ? (
+                              null // Render nothing if rating exists
+                            ) : (
+                              <Button variant="default" size="sm" className="sm:ml-2 transition-all duration-300 hover:scale-105 border-2">
+                                Rate Item
+                              </Button>
+                            )
+                          }
+                      />
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0 w-full">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex justify-between items-start gap-2">
-                        <div className="space-y-1">
-                          <h3 className="font-medium text-sm sm:text-base leading-tight">{item.name}</h3>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            Quantity: {item.quantity} × ₹{item.price}
-                          </p>
-                        </div>
-                        <div className="text-right font-medium text-sm sm:text-base whitespace-nowrap">
-                          ₹{item.price * item.quantity}
-                        </div>
-                      </div>
-                      {canRate && (
-                        <div className="flex items-center">
-                          {isLoadingRatings ? (
-                            <div className="h-8 w-8 flex items-center justify-center">
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            </div>
-                          ) : (
-                            <RatingDialog
-                              itemId={item.id}
-                              itemName={item.name}
-                              orderId={order.orderId}
-                              onRatingSubmit={handleRatingSubmit}
-                              existingRating={ratings[item.id]}
-                              trigger={
-                                <Button 
-                                  variant={ratings[item.id] ? "default" : "outline"}
-                                  size="sm"
-                                  className={cn(
-                                    "w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9 transition-all duration-300 hover:scale-105",
-                                    ratings[item.id] && "bg-primary/10 hover:bg-primary/20"
-                                  )}
-                                >
-                                  <Star className={cn(
-                                    "w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2",
-                                    ratings[item.id] && "fill-primary text-primary"
-                                  )} />
-                                  {ratings[item.id] ? 'View Rating' : 'Rate Item'}
-                                </Button>
-                              }
-                            />
-                          )}
-                        </div>
+                  
+                  {(item.spiceLevel || item.selectedOptions?.length || item.specialInstructions) && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {item.spiceLevel && <>Spice: {item.spiceLevel}</>}
+                      {item.spiceLevel && (item.selectedOptions?.length || item.specialInstructions) ? ' • ' : ''}
+                      {item.selectedOptions?.length ? 
+                        `Options: ${item.selectedOptions.join(', ')}` : ''
+                      }
+                      {item.specialInstructions && (
+                        <div className="mt-0.5 italic">"{item.specialInstructions}"</div>
                       )}
                     </div>
-                  </div>
+                  )}
+                  
                 </div>
+                <div className="text-right">₹{item.price * item.quantity}</div>
               </li>
             ))}
           </ul>
         </CardContent>
         
-        <CardFooter className="flex items-center justify-between p-3 sm:p-4 md:p-6 bg-muted/20 border-t">
-          <div className="text-sm sm:text-base font-medium text-muted-foreground">Total Amount</div>
-          <div className="text-base sm:text-lg font-bold text-primary">₹{order.total}</div>
+        <CardFooter className="flex items-center justify-between px-4 py-4 bg-muted/40 border-t md:px-6 md:py-0">
+          <div className="font-medium">Total Amount</div>
+          <div className="font-bold">₹{order.total}</div>
         </CardFooter>
       </Card>
     </AnimatedContainer>
