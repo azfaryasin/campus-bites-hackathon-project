@@ -28,42 +28,56 @@ jobs:
           node-version: '18'
           cache: 'npm'
           
-      - name: Check Node and NPM version
+      - name: Verify Environment
         run: |
+          echo "Node version:"
           node --version
+          echo "NPM version:"
           npm --version
+          echo "Current directory:"
+          pwd
+          echo "Directory contents:"
+          ls -la
           
       - name: Install Dependencies
         run: |
+          echo "Installing dependencies..."
           npm ci
           echo "Installed dependencies:"
           npm list --depth=0
           
-      - name: Debug Pre-Build
+      - name: Verify Build Configuration
         run: |
-          echo "Current working directory:"
-          pwd
-          echo "Directory contents:"
-          ls -la
+          echo "Package.json contents:"
+          cat package.json
+          echo "Vite config contents:"
+          cat vite.config.ts
           
       - name: Build
         run: |
           echo "Starting build process..."
           npm run build
           echo "Build completed."
-        
-      - name: Debug Build Output
+          
+      - name: Verify Build Output
         run: |
           echo "Current directory contents:"
           ls -la
-          echo "Dist directory contents:"
-          ls -la dist/ || echo "dist/ directory not found!"
+          if [ -d "dist" ]; then
+            echo "Dist directory exists. Contents:"
+            ls -la dist/
+            echo "Size of dist directory:"
+            du -sh dist/
+          else
+            echo "ERROR: dist directory not found!"
+            exit 1
+          fi
           
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: github-pages
-          path: ./dist
+          path: dist
           if-no-files-found: error
           retention-days: 1
 
@@ -74,23 +88,30 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v3
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
         with:
           name: github-pages
           path: ./dist
 
-      - name: Debug Downloaded Artifact
+      - name: Verify Downloaded Artifact
         run: |
           echo "Current directory contents:"
           ls -la
-          echo "Dist directory contents:"
-          ls -la dist/ || echo "dist/ directory not found!"
+          if [ -d "dist" ]; then
+            echo "Dist directory exists. Contents:"
+            ls -la dist/
+            echo "Size of dist directory:"
+            du -sh dist/
+          else
+            echo "ERROR: dist directory not found after download!"
+            exit 1
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
 
-      - name: Upload Pages artifact
+      - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v2
         with:
           path: ./dist
