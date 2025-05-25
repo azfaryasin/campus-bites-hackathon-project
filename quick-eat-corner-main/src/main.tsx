@@ -4,7 +4,7 @@ import './index.css'
 import { BrowserRouter } from 'react-router-dom';
 
 createRoot(document.getElementById("root")!).render(
-  <BrowserRouter basename="/campus-bites-hackathon-project/">
+  <BrowserRouter basename={import.meta.env.BASE_URL}>
     <App />
   </BrowserRouter>
 );
