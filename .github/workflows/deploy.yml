@@ -16,8 +16,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -70,41 +73,6 @@ jobs:
             du -sh dist/
           else
             echo "ERROR: dist directory not found!"
-            exit 1
-          fi
-          
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: github-pages
-          path: dist
-          if-no-files-found: error
-          retention-days: 1
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: github-pages
-          path: ./dist
-
-      - name: Verify Downloaded Artifact
-        run: |
-          echo "Current directory contents:"
-          ls -la
-          if [ -d "dist" ]; then
-            echo "Dist directory exists. Contents:"
-            ls -la dist/
-            echo "Size of dist directory:"
-            du -sh dist/
-          else
-            echo "ERROR: dist directory not found after download!"
             exit 1
           fi
 
