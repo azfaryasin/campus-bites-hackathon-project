@@ -14,6 +14,14 @@ export interface Order {
   statusHistory: StatusUpdate[];
 }
 
+export interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  category: 'food' | 'beverage';
+}
+
 // Mock food items
 export const mockFoodItems: CartItem[] = [
   {
@@ -79,5 +87,50 @@ export const mockOrders: Order[] = [
     timestamp: Date.now() - 5 * 60 * 1000,
     currentStatus: 'Preparing',
     statusHistory: createStatusHistory(Date.now() - 5 * 60 * 1000)
+  }
+];
+
+export const mockMenuItems: MenuItem[] = [
+  {
+    id: '1',
+    name: 'Butter Chicken',
+    price: 280,
+    image: '/images/butter-chicken.jpg',
+    category: 'food'
+  },
+  {
+    id: '2',
+    name: 'Veg Biryani',
+    price: 220,
+    image: '/images/veg-biryani.jpg',
+    category: 'food'
+  },
+  {
+    id: '3',
+    name: 'Masala Chai',
+    price: 30,
+    image: '/images/masala-chai.jpg',
+    category: 'beverage'
+  },
+  {
+    id: '4',
+    name: 'Cold Coffee',
+    price: 80,
+    image: '/images/cold-coffee.jpg',
+    category: 'beverage'
+  },
+  {
+    id: '5',
+    name: 'French Fries',
+    price: 120,
+    image: '/images/french-fries.jpg',
+    category: 'food'
+  },
+  {
+    id: '6',
+    name: 'Chicken Nuggets',
+    price: 160,
+    image: '/images/chicken-nuggets.jpg',
+    category: 'food'
   }
 ]; 
