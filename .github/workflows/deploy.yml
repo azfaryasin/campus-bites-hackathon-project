@@ -6,21 +6,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
-  actions: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,59 +23,16 @@ jobs:
           node-version: '18'
           cache: 'npm'
           
-      - name: Verify Environment
-        run: |
-          echo "Node version:"
-          node --version
-          echo "NPM version:"
-          npm --version
-          echo "Current directory:"
-          pwd
-          echo "Directory contents:"
-          ls -la
-          
       - name: Install Dependencies
         run: |
-          echo "Installing dependencies..."
           npm ci
-          echo "Installed dependencies:"
-          npm list --depth=0
-          
-      - name: Verify Build Configuration
-        run: |
-          echo "Package.json contents:"
-          cat package.json
-          echo "Vite config contents:"
-          cat vite.config.ts
           
       - name: Build
         run: |
-          echo "Starting build process..."
           npm run build
-          echo "Build completed."
           
-      - name: Verify Build Output
-        run: |
-          echo "Current directory contents:"
-          ls -la
-          if [ -d "dist" ]; then
-            echo "Dist directory exists. Contents:"
-            ls -la dist/
-            echo "Size of dist directory:"
-            du -sh dist/
-          else
-            echo "ERROR: dist directory not found!"
-            exit 1
-          fi
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v2
-        with:
-          path: ./dist
-
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2 
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist 
