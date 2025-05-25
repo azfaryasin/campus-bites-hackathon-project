@@ -9,6 +9,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: write
 
 concurrency:
   group: "pages"
@@ -35,29 +36,36 @@ jobs:
       - name: Install Dependencies
         run: |
           npm ci
-          npm list
-
-      - name: Check workspace before build
+          echo "Installed dependencies:"
+          npm list --depth=0
+          
+      - name: Debug Pre-Build
         run: |
+          echo "Current working directory:"
           pwd
+          echo "Directory contents:"
           ls -la
           
       - name: Build
-        run: npm run build
-        
-      - name: Check build output
         run: |
-          echo "Checking build output..."
+          echo "Starting build process..."
+          npm run build
+          echo "Build completed."
+        
+      - name: Debug Build Output
+        run: |
+          echo "Current directory contents:"
           ls -la
-          echo "Checking dist directory..."
-          ls -la dist/
+          echo "Dist directory contents:"
+          ls -la dist/ || echo "dist/ directory not found!"
           
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: github-pages
-          path: dist
+          path: ./dist
           if-no-files-found: error
+          retention-days: 1
 
   deploy:
     environment:
@@ -72,12 +80,12 @@ jobs:
           name: github-pages
           path: ./dist
 
-      - name: Check downloaded artifact
+      - name: Debug Downloaded Artifact
         run: |
-          echo "Checking downloaded artifact..."
+          echo "Current directory contents:"
           ls -la
-          echo "Checking dist directory..."
-          ls -la dist/
+          echo "Dist directory contents:"
+          ls -la dist/ || echo "dist/ directory not found!"
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
