@@ -27,12 +27,31 @@ jobs:
           node-version: '18'
           cache: 'npm'
           
+      - name: Check Node and NPM version
+        run: |
+          node --version
+          npm --version
+          
       - name: Install Dependencies
-        run: npm ci
-        
+        run: |
+          npm ci
+          npm list
+
+      - name: Check workspace before build
+        run: |
+          pwd
+          ls -la
+          
       - name: Build
         run: npm run build
         
+      - name: Check build output
+        run: |
+          echo "Checking build output..."
+          ls -la
+          echo "Checking dist directory..."
+          ls -la dist/
+          
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
@@ -52,6 +71,13 @@ jobs:
         with:
           name: github-pages
           path: ./dist
+
+      - name: Check downloaded artifact
+        run: |
+          echo "Checking downloaded artifact..."
+          ls -la
+          echo "Checking dist directory..."
+          ls -la dist/
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
