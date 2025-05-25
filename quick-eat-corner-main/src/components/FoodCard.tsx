@@ -54,11 +54,11 @@ export default function FoodCard({ item, isFavorite, onToggleFavorite }: FoodCar
 
   return (
     <FoodCardDialog item={item}>
-      <Card 
-        className="overflow-hidden h-full flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer relative"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
+        <Card 
+          className="overflow-hidden h-full flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer relative border border-gray-200 dark:border-gray-800 rounded-lg"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
         <button 
           onClick={(e) => {
             e.preventDefault();
@@ -108,20 +108,20 @@ export default function FoodCard({ item, isFavorite, onToggleFavorite }: FoodCar
           </div>
         </div>
         
-        <CardHeader className="p-4 pb-0">
-          <CardTitle className="text-lg font-bold">{item.name}</CardTitle>
-          <CardDescription className="text-sm line-clamp-2">
+        <CardHeader className="p-4 pb-2">
+          <CardTitle className="text-xl font-heading font-semibold text-foreground">{item.name}</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground line-clamp-2">
             {item.description}
           </CardDescription>
         </CardHeader>
         
-        <CardContent className="p-4 pt-2 flex-grow">
-          <p className="font-bold text-xl">₹{item.price}</p>
+        <CardContent className="p-4 pt-0 flex-grow">
+          <p className="font-bold text-2xl text-primary">₹{item.price}</p>
           <p className="text-xs text-muted-foreground mt-1">Prep time: {item.prepTime} mins</p>
         </CardContent>
         
         <CardFooter className="p-4 pt-0">
-          <Button className="w-full btn active:scale-95">
+          <Button className="w-full active:scale-95">
             View Details
           </Button>
         </CardFooter>

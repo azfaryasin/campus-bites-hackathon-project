@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 
-export function WelcomeMessage() {
+import { cn } from "@/lib/utils"; // Import cn utility
+
+interface WelcomeMessageProps {
+  className?: string;
+}
+
+export function WelcomeMessage({ className }: WelcomeMessageProps) {
   // const [greeting, setGreeting] = useState(""); // No longer needed
   
   // useEffect(() => { // Time-based logic no longer needed
@@ -18,7 +24,7 @@ export function WelcomeMessage() {
   const staticGreeting = "No more waiting – your meal is just a click away!";
 
   return (
-    <div className="mb-6 animate-fade-in">
+    <div className={cn("mb-6 animate-fade-in", className)}>
       <h2 className="text-2xl md:text-3xl font-heading font-bold text-foreground">
         {staticGreeting}
       </h2>

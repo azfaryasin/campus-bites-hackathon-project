@@ -114,8 +114,8 @@ export default function Menu() {
     (!filters.dietaryFilters || filters.dietaryFilters.length === 0);
 
   return (
-    <div className="container mx-auto px-4 md:px-6 py-6 max-w-7xl">
-      <WelcomeMessage />
+    <div className="container mx-auto px-4 md:px-6 py-6 max-w-screen-xl">
+      <WelcomeMessage className="mb-8" />
       
       <SearchFilterExtended
         onSearchChange={setSearchQuery}
@@ -127,7 +127,7 @@ export default function Menu() {
 
       {/* Favorites section */}
       {favorites.length > 0 && (
-        <AnimatedContainer animation="fade-in" className="mb-10">
+        <AnimatedContainer animation="fade-in" className="mb-12">
           <div className="flex items-center gap-2 mb-4">
             <Heart className="h-5 w-5 text-primary" />
             <h2 className="text-xl md:text-2xl font-bold">Your Favorites</h2>
@@ -152,7 +152,7 @@ export default function Menu() {
 
       {/* Recommendations section */}
       {showRecommendations && (
-        <AnimatedContainer animation="fade-in" className="mb-10">
+        <AnimatedContainer animation="fade-in" className="mb-12">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-xl md:text-2xl font-bold">Recommended for you</h2>
@@ -183,7 +183,7 @@ export default function Menu() {
       
       {/* Previously ordered items section */}
       {showRecommendations && previousOrders.length > 0 && (
-        <AnimatedContainer animation="fade-in" delay={300} className="mb-10">
+        <AnimatedContainer animation="fade-in" delay={300} className="mb-12">
           <div className="flex items-center gap-2 mb-4">
             <History className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-xl md:text-2xl font-bold">Previously Ordered</h2>
@@ -209,7 +209,7 @@ export default function Menu() {
       {/* Main food sections */}
       {Object.keys(groupedItems).length > 0 ? (
         Object.entries(groupedItems).map(([category, items], categoryIndex) => (
-          <AnimatedContainer key={category} animation="fade-in" delay={categoryIndex * 150} className="mb-10">
+          <AnimatedContainer key={category} animation="fade-in" delay={categoryIndex * 150} className="mb-12">
             <h2 className="text-xl md:text-2xl font-bold mb-4">{category}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {items.map((item, itemIndex) => (
