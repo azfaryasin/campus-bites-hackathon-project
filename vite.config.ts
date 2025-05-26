@@ -4,7 +4,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: '',
+  base: mode === 'production' ? '/campus-bites-hackathon-project/' : '/',
   server: {
     host: "::",
     port: 8080,
